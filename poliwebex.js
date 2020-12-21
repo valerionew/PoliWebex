@@ -20,6 +20,7 @@ const argv = yargs.options({
     k: { alias: 'noKeyring', type: 'boolean', default: false, demandOption: false, describe: 'Do not use system keyring'},
     t: { alias: 'noToastNotification', type: 'boolean', default: false, demandOption: false, describe: 'Disable toast notification'},
     i: { alias: 'timeout', type: 'number', demandOption: false, describe: 'Scale timeout by a factor X'},
+    r: { alias: 'retry', type: 'number', default: 0, demandOption: false, describe: 'Scale timeout by a factor X'},
     w: { alias: 'videoPwd', type: 'string', default: '', demandOption: false, describe: 'Video Password'}
 })
 .help('h')
@@ -134,7 +135,6 @@ async function downloadVideo(videoUrls, password, outputDirectory, videoPwd) {
         'Cookie': cookie,
         'accessPwd': videoPwd
     };
-
     for (let videoUrl of videoUrls) {
         if (videoUrl == "") continue; // jump empty url
         term.green(`\nStart downloading video: ${videoUrl}\n`);
@@ -257,6 +257,7 @@ async function downloadVideo(videoUrls, password, outputDirectory, videoPwd) {
             appID: "https://nodejs.org/", // Such a smart assignment to avoid SnoreToast start menu link. Don't say to my mother.
         }, function(error, response) { /*console.log(response);*/ });
     }
+    return notDownloaded;
 
 }
 
@@ -635,11 +636,17 @@ async function extractCookies(page) {
     }
     return `ticket=${ticketCookie.value}`;
 }
-
+var retryUrls;
+var retryNumber;
 term.brightBlue(`Project powered by @sup3rgiu\nFeatures: PoliMi Autologin - Multithreading download\n`);
 sanityChecks();
 const videoUrls = parseVideoUrls(argv.videoUrls);
 console.info('Video URLs: %s', videoUrls);
 //console.info('Password: %s', argv.password);
 console.info('Output Directory: %s\n', argv.outputDirectory);
-downloadVideo(videoUrls, argv.password, argv.outputDirectory, argv.videoPwd);
+
+retryUrls = downloadVideo(videoUrls, argv.password, argv.outputDirectory, argv.videoPwd);
+
+for (retryNumber = 0; retryNumber < argv.retry; retryNumber++) {
+  retryUrls = downloadVideo(retryUrls, argv.password, argv.outputDirectory, argv.videoPwd);
+}
